@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>簡易 MBTI 測驗</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 使用 Inter 字體 */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* 基本按鈕樣式 */
+        .btn {
+            @apply px-6 py-3 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 transition duration-300 ease-in-out text-lg;
+        }
+        /* 結果卡片樣式 */
+        .result-card {
+            @apply bg-white p-8 rounded-xl shadow-lg text-center;
+        }
+    </style>
+     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gradient-to-br from-blue-100 to-purple-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white p-8 rounded-xl shadow-lg max-w-2xl w-full">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">簡易 MBTI 測驗</h1>
+
+        <div id="question-container" class="mb-8">
+            <p id="question-text" class="text-xl text-gray-700 mb-6 text-center"></p>
+            <div class="flex flex-col sm:flex-row justify-center gap-4">
+                <button id="option-a" class="btn"></button>
+                <button id="option-b" class="btn"></button>
+            </div>
+        </div>
+
+        <div id="result-container" class="hidden result-card">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">你的測驗結果</h2>
+            <p id="result-text" class="text-5xl font-bold text-blue-600 mb-4"></p>
+            <p id="result-description" class="text-gray-600"></p>
+             <button id="restart-button" class="mt-6 px-6 py-3 bg-gray-500 text-white rounded-lg shadow hover:bg-gray-600 transition duration-300 ease-in-out text-lg">
+                重新測驗
+            </button>
+        </div>
+
+        <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 mt-8">
+            <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+        </div>
+        <p id="progress-label" class="text-center text-sm text-gray-500 mt-2"></p>
+    </div>
+
+    <script>
+        // 問題列表
+        const questions = [
+            // E vs I (外向 vs 內向)
+            { question: "在社交聚會後，你通常感覺？", a: { text: "精力充沛", type: "E" }, b: { text: "有點疲憊", type: "I" } },
+            { question: "當你需要解決一個難題時，你傾向於？", a: { text: "與他人討論", type: "E" }, b: { text: "獨自思考", type: "I" } },
+            // S vs N (實感 vs 直覺)
+            { question: "你更傾向於關注？", a: { text: "具體的事實和細節", type: "S" }, b: { text: "可能性和未來的潛力", type: "N" } },
+            { question: "學習新事物時，你比較喜歡？", a: { text: "實際操作和應用", type: "S" }, b: { text: "理解概念和理論", type: "N" } },
+            // T vs F (思考 vs 情感)
+            { question: "做決定時，你主要依賴？", a: { text: "邏輯和客觀分析", type: "T" }, b: { text: "價值觀和對他人的影響", type: "F" } },
+            { question: "當朋友遇到困難時，你傾向於？", a: { text: "提供解決方案", type: "T" }, b: { text: "給予情感支持", type: "F" } },
+            // J vs P (判斷 vs 感知)
+            { question: "你的生活方式比較偏向？", a: { text: "有計劃和條理", type: "J" }, b: { text: "隨性且靈活", type: "P" } },
+            { question: "對於截止日期，你通常會？", a: { text: "提前計劃並完成", type: "J" }, b: { text: "到最後一刻才完成", type: "P" } }
+        ];
+
+        // 獲取 DOM 元素
+        const questionContainer = document.getElementById('question-container');
+        const questionText = document.getElementById('question-text');
+        const optionAButton = document.getElementById('option-a');
+        const optionBButton = document.getElementById('option-b');
+        const resultContainer = document.getElementById('result-container');
+        const resultText = document.getElementById('result-text');
+        const resultDescription = document.getElementById('result-description'); // 描述結果的元素
+        const progressBar = document.getElementById('progress-bar');
+        const progressLabel = document.getElementById('progress-label');
+        const restartButton = document.getElementById('restart-button');
+
+
+        // 測驗狀態
+        let currentQuestionIndex = 0;
+        const scores = { E: 0, I: 0, S: 0, N: 0, T: 0, F: 0, J: 0, P: 0 };
+
+        // 顯示問題函式
+        function displayQuestion() {
+            if (currentQuestionIndex < questions.length) {
+                const currentQuestion = questions[currentQuestionIndex];
+                questionText.textContent = currentQuestion.question;
+                optionAButton.textContent = currentQuestion.a.text;
+                optionBButton.textContent = currentQuestion.b.text;
+                optionAButton.onclick = () => handleAnswer(currentQuestion.a.type);
+                optionBButton.onclick = () => handleAnswer(currentQuestion.b.type);
+
+                // 更新進度條
+                const progressPercentage = ((currentQuestionIndex) / questions.length) * 100;
+                progressBar.style.width = `${progressPercentage}%`;
+                progressLabel.textContent = `問題 ${currentQuestionIndex + 1} / ${questions.length}`;
+
+
+            } else {
+                // 測驗結束，顯示結果
+                showResult();
+            }
+        }
+
+        // 處理答案函式
+        function handleAnswer(type) {
+            scores[type]++; // 根據選擇的答案類型增加分數
+            currentQuestionIndex++; // 移至下一題
+            displayQuestion(); // 顯示下一題或結果
+        }
+
+        // 計算並顯示結果函式
+        function showResult() {
+            // 根據分數計算最終 MBTI 類型
+            let finalType = "";
+            finalType += scores.E >= scores.I ? "E" : "I";
+            finalType += scores.S >= scores.N ? "S" : "N";
+            finalType += scores.T >= scores.F ? "T" : "F";
+            finalType += scores.J >= scores.P ? "J" : "P";
+
+            // 隱藏問題區，顯示結果區
+            questionContainer.classList.add('hidden');
+            resultContainer.classList.remove('hidden');
+
+            // 顯示最終類型
+            resultText.textContent = finalType;
+
+            // (可選) 根據類型顯示簡單描述
+            // 注意：這只是非常簡化的描述，真實 MBTI 複雜得多
+            let description = "這是一個根據您回答計算出的可能類型。";
+             switch(finalType) {
+                case "ISTJ": description = "實際、有條理、負責任。"; break;
+                case "ISFJ": description = "溫暖、有責任心、體貼他人。"; break;
+                case "INFJ": description = "理想主義、有洞察力、關懷他人。"; break;
+                case "INTJ": description = "獨立、有策略、具備遠見。"; break;
+                case "ISTP": description = "務實、擅長解決問題、喜歡動手。"; break;
+                case "ISFP": description = "隨和、敏感、注重當下。"; break;
+                case "INFP": description = "理想主義、忠於價值觀、有好奇心。"; break;
+                case "INTP": description = "邏輯性強、好奇、喜歡分析。"; break;
+                case "ESTP": description = "精力充沛、愛好行動、注重實際。"; break;
+                case "ESFP": description = "熱情、外向、喜歡與人互動。"; break;
+                case "ENFP": description = "熱情、有創意、可能性導向。"; break;
+                case "ENTP": description = "聰明、反應快、喜歡挑戰。"; break;
+                case "ESTJ": description = "務實、果斷、有組織能力。"; break;
+                case "ESFJ": description = "熱心、合作、樂於助人。"; break;
+                case "ENFJ": description = "有魅力、鼓舞人心、關懷他人。"; break;
+                case "ENTJ": description = "果斷、有領導力、目標導向。"; break;
+                default: description = "這是一個根據您回答計算出的可能類型。";
+            }
+            resultDescription.textContent = description + " (請注意，這僅為簡易測驗，結果僅供參考)";
+
+
+            // 更新進度條至 100%
+            progressBar.style.width = '100%';
+            progressLabel.textContent = `測驗完成！`;
+        }
+
+        // 重新開始測驗函式
+        function restartTest() {
+            currentQuestionIndex = 0;
+            // 重置分數
+            for (const key in scores) {
+                scores[key] = 0;
+            }
+            // 隱藏結果區，顯示問題區
+            resultContainer.classList.add('hidden');
+            questionContainer.classList.remove('hidden');
+            // 重新顯示第一題
+            displayQuestion();
+        }
+
+
+        // 添加重新開始按鈕事件監聽器
+        restartButton.addEventListener('click', restartTest);
+
+
+        // 初始化測驗：顯示第一題
+        displayQuestion();
+    </script>
+
+</body>
+</html>
